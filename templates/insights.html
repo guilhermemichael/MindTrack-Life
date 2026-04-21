@@ -8,16 +8,34 @@
     </div>
 </section>
 
+<section class="stats-grid compact">
+    <article class="stat-card">
+        <span>Life Score</span>
+        <strong>{{ data.summary.life_score }}</strong>
+        <small>{{ data.summary.profile }}</small>
+    </article>
+    <article class="stat-card">
+        <span>Forecast de humor</span>
+        <strong>{{ data.forecast.predicted_mood if data.forecast.predicted_mood is not none else '--' }}</strong>
+        <small>{{ data.forecast.horizon_days }} dias</small>
+    </article>
+    <article class="stat-card">
+        <span>Streak atual</span>
+        <strong>{{ data.summary.current_streak }}</strong>
+        <small>melhor: {{ data.summary.best_streak }}</small>
+    </article>
+</section>
+
 <section class="insight-grid">
     {% for insight in data.insights %}
-    <article class="panel insight-card">
-        <p class="eyebrow">Insight {{ loop.index }}</p>
-        <h2>{{ insight }}</h2>
+    <article class="panel insight-card insight-{{ insight.level }}">
+        <p class="eyebrow">{{ insight.title }}</p>
+        <h2>{{ insight.message }}</h2>
     </article>
     {% endfor %}
 </section>
 
-<section class="stats-grid compact">
+<section class="stats-grid compact two-line">
     <article class="stat-card">
         <span>Correlacao sono x humor</span>
         <strong>{{ data.correlations.sleep_mood if data.correlations.sleep_mood is not none else '--' }}</strong>

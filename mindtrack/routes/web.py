@@ -1,14 +1,44 @@
 from datetime import date
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
-from sqlite3 import IntegrityError
+from flask import Blueprint, flash, redirect, render_template, request, send_file, session, url_for
+from sqlalchemy.exc import IntegrityError
 
 from ..auth import login_required
-from ..services.analytics import get_dashboard_data
-from ..services.entries import create_entry, delete_entry, get_entry, list_entries, update_entry, validate_entry_form
+from ..services.analytics import get_analytics_snapshot
+from ..services.entries import (
+    ValidationError,
+    create_entry,
+    delete_entry,
+    export_entries_csv,
+    get_entry,
+    get_latest_entry,
+    list_entries,
+    update_entry,
+    validate_entry_payload,
+)
+from ..services.forecast import predict_mood
+from ..services.insights import generate_insights
 
 
 web_bp = Blueprint("web", __name__)
+
+
+def _build_dashboard_payload(user_id: int) -> dict:
+    analytics = get_analytics_snapshot(user_id)
+    forecast = predict_mood(analytics["mood_values"])
+    insights = generate_insights(analytics, forecast)
+
+    return {
+        "summary": analytics["summary"],
+        "metrics": analytics["metrics"],
+        "correlations": analytics["correlations"],
+        "comparisons": analytics["comparisons"],
+        "gamification": analytics["gamification"],
+        "charts": analytics["charts"],
+        "history": analytics["history"],
+        "forecast": forecast,
+        "insights": insights,
+    }
 
 
 @web_bp.route("/")
@@ -21,22 +51,33 @@ def home():
 @web_bp.route("/dashboard")
 @login_required
 def dashboard():
-    data = get_dashboard_data(session["user_id"])
+    data = _build_dashboard_payload(session["user_id"])
     return render_template("dashboard.html", data=data, today=date.today().isoformat())
 
 
 @web_bp.route("/entries/new", methods=["GET", "POST"])
 @login_required
 def create_entry_view():
+    previous_entry = get_latest_entry(session["user_id"])
     if request.method == "POST":
-        payload = validate_entry_form(request.form)
         try:
+            payload = validate_entry_payload(request.form)
             create_entry(session["user_id"], payload)
             flash("Registro salvo e analise atualizada.", "success")
             return redirect(url_for("web.dashboard"))
+        except ValidationError as error:
+            flash(str(error), "error")
         except IntegrityError:
+            from ..database import db
+
+            db.session.rollback()
             flash("Ja existe um registro para essa data. Edite o registro existente.", "error")
-    return render_template("entries/form.html", entry=None, today=date.today().isoformat())
+    return render_template(
+        "entries/form.html",
+        entry=previous_entry,
+        is_prefill=True,
+        today=date.today().isoformat(),
+    )
 
 
 @web_bp.route("/history")
@@ -50,27 +91,45 @@ def history():
 @login_required
 def edit_entry(entry_id: int):
     entry = get_entry(session["user_id"], entry_id)
+    if entry is None:
+        flash("Registro nao encontrado.", "error")
+        return redirect(url_for("web.history"))
+
     if request.method == "POST":
-        payload = validate_entry_form(request.form)
         try:
+            payload = validate_entry_payload(request.form)
             update_entry(session["user_id"], entry_id, payload)
             flash("Registro atualizado com sucesso.", "success")
             return redirect(url_for("web.history"))
+        except ValidationError as error:
+            flash(str(error), "error")
         except IntegrityError:
+            from ..database import db
+
+            db.session.rollback()
             flash("A data escolhida ja esta ocupada por outro registro.", "error")
-    return render_template("entries/form.html", entry=entry, today=date.today().isoformat())
+    return render_template("entries/form.html", entry=entry, is_prefill=False, today=date.today().isoformat())
 
 
 @web_bp.post("/entries/<int:entry_id>/delete")
 @login_required
 def delete_entry_view(entry_id: int):
-    delete_entry(session["user_id"], entry_id)
-    flash("Registro removido.", "success")
+    if delete_entry(session["user_id"], entry_id):
+        flash("Registro removido.", "success")
+    else:
+        flash("Registro nao encontrado.", "error")
     return redirect(url_for("web.history"))
 
 
 @web_bp.route("/insights")
 @login_required
 def insights():
-    data = get_dashboard_data(session["user_id"])
+    data = _build_dashboard_payload(session["user_id"])
     return render_template("insights.html", data=data)
+
+
+@web_bp.get("/export/csv")
+@login_required
+def export_csv():
+    export_path = export_entries_csv(session["user_id"])
+    return send_file(export_path, as_attachment=True, download_name="mindtrack-life-export.csv")

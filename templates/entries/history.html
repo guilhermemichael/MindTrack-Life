@@ -6,6 +6,10 @@
         <p class="eyebrow">Historico</p>
         <h1>Todos os registros em ordem clara e editavel.</h1>
     </div>
+    <div class="hero-actions">
+        <a class="primary-button" href="{{ url_for('web.create_entry_view') }}">Novo registro</a>
+        <a class="ghost-button" href="{{ url_for('web.export_csv') }}">Exportar CSV</a>
+    </div>
 </section>
 
 <section class="panel table-panel">
@@ -18,6 +22,7 @@
                 <th>Exercicio</th>
                 <th>Humor</th>
                 <th>Progresso</th>
+                <th>Energia</th>
                 <th>Acoes</th>
             </tr>
         </thead>
@@ -30,6 +35,7 @@
                 <td>{{ entry.exercise_minutes }} min</td>
                 <td>{{ entry.mood_score }}/10</td>
                 <td>{{ entry.progress_percent }}%</td>
+                <td>{{ entry.energy_level }}/10</td>
                 <td class="actions">
                     <a class="table-link" href="{{ url_for('web.edit_entry', entry_id=entry.id) }}">Editar</a>
                     <form method="post" action="{{ url_for('web.delete_entry_view', entry_id=entry.id) }}">
@@ -39,7 +45,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7">Nenhum registro ainda. Crie o primeiro para liberar analises.</td>
+                <td colspan="8">Nenhum registro ainda. Crie o primeiro para liberar analises.</td>
             </tr>
             {% endfor %}
         </tbody>

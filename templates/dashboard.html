@@ -4,32 +4,35 @@
 <section class="hero">
     <div>
         <p class="eyebrow">Painel principal</p>
-        <h1>Seu comportamento, seu humor e sua evolucao em uma visao clara.</h1>
-        <p class="hero-copy">Registre o dia, acompanhe tendencias e transforme rotina em inteligencia pessoal.</p>
+        <h1>Seu comportamento agora tem leitura, previsao e direcao.</h1>
+        <p class="hero-copy">Use o dashboard para ver habitos, humor, comparacao semanal e o proximo passo mais inteligente.</p>
     </div>
-    <a class="primary-button" href="{{ url_for('web.create_entry_view') }}">Registrar hoje</a>
+    <div class="hero-actions">
+        <a class="primary-button" href="{{ url_for('web.create_entry_view') }}">Registrar hoje</a>
+        <a class="ghost-button" href="{{ url_for('web.export_csv') }}">Exportar dados</a>
+    </div>
 </section>
 
 <section class="stats-grid">
+    <article class="stat-card accent">
+        <span>Life Score</span>
+        <strong>{{ data.summary.life_score }}</strong>
+        <small>{{ data.summary.profile }}</small>
+    </article>
     <article class="stat-card">
         <span>Humor medio</span>
         <strong>{{ data.summary.avg_mood }}</strong>
-        <small>escala de 1 a 10</small>
+        <small>atual: {{ data.summary.latest_mood }}/10</small>
     </article>
     <article class="stat-card">
         <span>Sono medio</span>
         <strong>{{ data.summary.avg_sleep }}h</strong>
-        <small>rotina de recuperacao</small>
+        <small>energia media {{ data.summary.avg_energy }}/10</small>
     </article>
     <article class="stat-card">
-        <span>Life Score</span>
-        <strong>{{ data.summary.life_score }}</strong>
-        <small>indice geral de equilibrio</small>
-    </article>
-    <article class="stat-card">
-        <span>Consistencia</span>
-        <strong>{{ data.summary.consistency_streak }} dias</strong>
-        <small>sequencia mais forte</small>
+        <span>Streak atual</span>
+        <strong>{{ data.summary.current_streak }} dias</strong>
+        <small>melhor streak: {{ data.summary.best_streak }}</small>
     </article>
 </section>
 
@@ -44,6 +47,37 @@
         <canvas id="trendChart"></canvas>
     </article>
 
+    <article class="panel side-stack">
+        <div class="metric-stack-card">
+            <p class="eyebrow">Perfil</p>
+            <h2>{{ data.summary.profile }}</h2>
+            <p class="muted-copy">Seu score atual mistura sono, estudo e humor para mostrar seu momento geral.</p>
+            <div class="mini-grid">
+                <div><span>Progresso medio</span><strong>{{ data.summary.avg_progress }}%</strong></div>
+                <div><span>Estudo medio</span><strong>{{ data.summary.avg_study }}h</strong></div>
+            </div>
+        </div>
+        <div class="metric-stack-card">
+            <p class="eyebrow">Forecast</p>
+            <h2>{{ data.forecast.predicted_mood if data.forecast.predicted_mood is not none else '--' }}</h2>
+            <p class="muted-copy">{{ data.forecast.message }}</p>
+        </div>
+        <div class="metric-stack-card">
+            <p class="eyebrow">Gamificacao</p>
+            <h2>{{ data.gamification.weekly_productive_days }}/7 dias</h2>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: {{ data.summary.weekly_goal_progress }}%"></div>
+            </div>
+            <p class="muted-copy">
+                {% if data.summary.best_streak > 0 %}
+                Faltam {{ data.gamification.days_to_new_record }} dias para bater seu recorde.
+                {% else %}
+                Construa seus primeiros dias de consistencia para liberar recordes.
+                {% endif %}
+            </p>
+        </div>
+    </article>
+
     <article class="panel chart-panel">
         <div class="panel-header">
             <div>
@@ -54,6 +88,16 @@
         <canvas id="habitChart"></canvas>
     </article>
 
+    <article class="panel chart-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Comparacao semanal</p>
+                <h2>Semana atual vs anterior</h2>
+            </div>
+        </div>
+        <canvas id="comparisonChart"></canvas>
+    </article>
+
     <article class="panel quick-panel">
         <div class="panel-header">
             <div>
@@ -62,28 +106,23 @@
             </div>
         </div>
         <div class="quick-metrics">
-            <div><span>Progresso medio</span><strong>{{ data.summary.avg_progress }}%</strong></div>
-            <div><span>Estudo medio</span><strong>{{ data.summary.avg_study }}h</strong></div>
-            <div><span>Exercicio medio</span><strong>{{ data.summary.avg_exercise }} min</strong></div>
+            <div><span>Humor minimo</span><strong>{{ data.metrics.min_mood }}</strong></div>
+            <div><span>Humor maximo</span><strong>{{ data.metrics.max_mood }}</strong></div>
+            <div><span>Progresso maximo</span><strong>{{ data.metrics.max_progress }}%</strong></div>
         </div>
         <a class="secondary-button" href="{{ url_for('web.create_entry_view') }}">Abrir formulario</a>
     </article>
-
-    <article class="panel insights-panel">
-        <div class="panel-header">
-            <div>
-                <p class="eyebrow">Insights</p>
-                <h2>Leituras do seu padrao</h2>
-            </div>
-        </div>
-        <div class="insight-list">
-            {% for insight in data.insights[:4] %}
-            <div class="insight-item">{{ insight }}</div>
-            {% endfor %}
-        </div>
-    </article>
-    <script id="chart-data" type="application/json">{{ data.charts | tojson }}</script>
 </section>
+
+<section class="insight-grid">
+    {% for insight in data.insights %}
+    <article class="insight-card insight-{{ insight.level }}">
+        <p class="eyebrow">{{ insight.title }}</p>
+        <h3>{{ insight.message }}</h3>
+    </article>
+    {% endfor %}
+</section>
+<script id="chart-data" type="application/json">{{ data.charts | tojson }}</script>
 {% endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>

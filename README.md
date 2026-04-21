@@ -1,48 +1,73 @@
 # MindTrack-Life
 
-MindTrack-Life e um sistema web em Flask para acompanhar habitos, diario emocional e evolucao pessoal com foco em autoconhecimento orientado por dados.
+MindTrack-Life e uma plataforma web de analise comportamental que transforma registros diarios em metricas, insights humanos, previsao simples e um score de evolucao pessoal.
 
 ## O que o projeto entrega
 
-- autenticacao com cadastro, login e sessoes por usuario
-- registro diario em tela unica com sono, estudo, exercicio, leitura, lazer, humor, energia, progresso e notas
-- CRUD completo dos registros
-- dashboard dark mode com cards, graficos e insights
-- API REST em JSON para dashboard e registros
-- analise comportamental com medias, tendencias, correlacoes e Life Score
-- exportacao automatica de CSV por usuario
+- autenticacao com hash de senha, sessao segura e usuarios independentes
+- registro diario rapido com sono, estudo, exercicio, leitura, lazer, humor, energia, progresso e notas
+- dashboard dark mode com Life Score, streak, forecast, comparacao semanal e graficos Chart.js
+- analise comportamental com medias, min/max, correlacoes, perfil e gamificacao
+- insights em linguagem humana e previsao de humor para os proximos dias
+- exportacao CSV por usuario e API REST em JSON consistente
+- arquitetura Flask factory pronta para SQLite em dev e PostgreSQL em producao
 
-## Arquitetura
+## Stack
+
+- Backend: Flask + Flask-SQLAlchemy
+- Banco: SQLite em desenvolvimento, PostgreSQL no deploy
+- Frontend: HTML + CSS responsivo + Chart.js
+- Auth: sessao Flask + hash seguro com Werkzeug
+- Infra: `.env`, `render.yaml`, `gunicorn`, logs simples
+- Qualidade: `pytest` com smoke tests
+
+## Estrutura
 
 ```text
-MindTrack-Life/
-|-- app.py
-|-- mindtrack/
-|   |-- __init__.py
-|   |-- auth.py
-|   |-- database.py
-|   |-- models/
-|   |-- routes/
-|   |-- services/
-|-- templates/
-|-- static/
-|-- instance/
-|-- requirements.txt
+mindtrack-life/
+├── app.py
+├── mindtrack/
+│   ├── __init__.py
+│   ├── auth.py
+│   ├── config.py
+│   ├── database.py
+│   ├── models/
+│   │   ├── entry.py
+│   │   └── user.py
+│   ├── routes/
+│   │   ├── api.py
+│   │   ├── auth.py
+│   │   └── web.py
+│   ├── services/
+│   │   ├── analytics.py
+│   │   ├── entries.py
+│   │   ├── forecast.py
+│   │   └── insights.py
+│   └── utils/
+│       ├── cache.py
+│       ├── helpers.py
+│       └── security.py
+├── static/
+├── templates/
+├── tests/
+├── .env.example
+├── render.yaml
+└── requirements.txt
 ```
 
-## Como rodar
+## Features que vendem o projeto
 
-### 1. Criar e ativar ambiente virtual
+- Life Score de 0 a 100 baseado em sono, estudo e humor
+- perfil automatico do usuario: `Produtivo Consistente`, `Equilibrado` ou `Oscilante`
+- correlacao entre sono e humor, estudo e progresso, exercicio e humor
+- forecast simples:
+  `Se continuar assim, seu humor medio pode chegar a X em 7 dias`
+- streak atual, melhor streak e meta semanal visual
+- API pronta para integracao com frontend mais moderno ou app mobile
 
-Se voce tiver Python 3.12+:
+## Como rodar localmente
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-Se preferir usar `uv`:
+### 1. Ambiente virtual
 
 ```powershell
 uv venv .venv --python 3.12
@@ -50,40 +75,84 @@ uv venv .venv --python 3.12
 uv pip install -r requirements.txt
 ```
 
-### 2. Executar a aplicacao
+### 2. Configuracao
+
+Crie o arquivo `.env` a partir do `.env.example`.
+
+```env
+FLASK_ENV=development
+SECRET_KEY=change-me-before-production
+DATABASE_URL=sqlite:///instance/mindtrack.db
+CACHE_TTL_SECONDS=45
+LOG_LEVEL=INFO
+```
+
+### 3. Executar
 
 ```powershell
 $env:FLASK_APP = "app.py"
 flask run
 ```
 
-Depois abra `http://127.0.0.1:5000`.
+Acesse: [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-## Endpoints principais
+## Testes
+
+```powershell
+pytest
+```
+
+## API principal
 
 - `GET /api/dashboard`
 - `GET /api/entries`
 - `POST /api/entries`
 - `PUT /api/entries/<id>`
 - `DELETE /api/entries/<id>`
+- `GET /api/analytics`
+- `GET /api/insights`
+- `GET /api/forecast`
 
-## Git e GitHub
+Todas as respostas seguem o formato:
 
-Para conectar com o repositrio remoto:
-
-```powershell
-git init
-git branch -M main
-git remote add origin https://github.com/guilhermemichael/MindTrack-Life.git
-git add .
-git commit -m "feat: scaffold initial MindTrack-Life platform"
-git push -u origin main
+```json
+{
+  "success": true,
+  "data": {}
+}
 ```
 
-## Proximas evolucoes sugeridas
+## Deploy no Render
 
-- migracao para PostgreSQL
-- tasks assincronas para insights mais pesados
+O repositorio ja inclui `render.yaml` e esta pronto para subir com:
+
+- build command: `pip install -r requirements.txt`
+- start command: `gunicorn app:app`
+- variaveis obrigatorias:
+  - `SECRET_KEY`
+  - `DATABASE_URL`
+  - `FLASK_ENV=production`
+
+Para producao, use PostgreSQL do proprio Render ou Railway.
+
+## Fluxo do produto
+
+1. usuario cria conta e faz login
+2. registra o dia em um unico formulario
+3. o sistema salva no banco
+4. analytics, forecast e insights sao recalculados
+5. dashboard mostra score, tendencias, comparacoes e recomendacoes
+
+## Status atual
+
+- repositorio versionado e publicado no GitHub
+- base pronta para deploy
+- README atualizado para recrutador e avaliador tecnico
+
+## Proximos upgrades naturais
+
+- screenshots reais do dashboard no README
+- filtros mensal e trimestral
 - notificacoes e lembretes
-- comparativos semanal e mensal
-- deploy em Render ou Railway
+- exportacao PDF
+- deploy online final com URL publica

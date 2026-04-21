@@ -1,14 +1,26 @@
 from math import sqrt
 
-from ..database import get_db
+from flask import current_app
+
+from ..models.entry import DailyEntry
+from ..utils.cache import get as cache_get
+from ..utils.cache import set as cache_set
 
 
 def _average(values):
     return round(sum(values) / len(values), 2) if values else 0
 
 
+def _min_value(values):
+    return round(min(values), 2) if values else 0
+
+
+def _max_value(values):
+    return round(max(values), 2) if values else 0
+
+
 def _pearson(x_values, y_values):
-    if len(x_values) < 3 or len(y_values) < 3 or len(x_values) != len(y_values):
+    if len(x_values) < 3 or len(x_values) != len(y_values):
         return None
     mean_x = sum(x_values) / len(x_values)
     mean_y = sum(y_values) / len(y_values)
@@ -19,167 +31,218 @@ def _pearson(x_values, y_values):
     return round(numerator / denominator, 2)
 
 
-def _trend(old_values, new_values):
-    if not old_values and not new_values:
+def _delta(current_values, previous_values):
+    if not current_values and not previous_values:
         return 0
-    return round(_average(new_values) - _average(old_values), 2)
+    return round(_average(current_values) - _average(previous_values), 2)
 
 
-def _longest_consistency_streak(rows):
-    longest = current = 0
-    previous_day = None
-    for row in rows:
-        productive = row["study_hours"] >= 1 or row["exercise_minutes"] >= 20 or row["progress_percent"] >= 40
-        if not productive:
-            current = 0
-            previous_day = row["entry_date"]
-            continue
-        if previous_day:
+def _is_productive(entry_dict: dict) -> bool:
+    return (
+        entry_dict["study_hours"] >= 1
+        or entry_dict["exercise_minutes"] >= 20
+        or entry_dict["progress_percent"] >= 40
+        or entry_dict["reading_hours"] >= 0.5
+    )
+
+
+def _streaks(history: list[dict]) -> tuple[int, int]:
+    best = current = 0
+    rolling = 0
+
+    for item in history:
+        if _is_productive(item):
+            rolling += 1
+            best = max(best, rolling)
+        else:
+            rolling = 0
+
+    for item in reversed(history):
+        if _is_productive(item):
             current += 1
         else:
-            current = 1
-        previous_day = row["entry_date"]
-        longest = max(longest, current)
-    return longest
+            break
+
+    return current, best
 
 
-def get_dashboard_data(user_id: int):
-    db = get_db()
-    rows = db.execute(
-        """
-        SELECT * FROM daily_entries
-        WHERE user_id = ?
-        ORDER BY entry_date
-        """,
-        (user_id,),
-    ).fetchall()
+def _life_score(avg_sleep: float, avg_study: float, avg_mood: float) -> int:
+    score = 0
+    score += min(avg_sleep / 8, 1) * 30
+    score += min(avg_study / 4, 1) * 30
+    score += (avg_mood / 10) * 40
+    return round(score)
 
-    if not rows:
-        return {
-            "summary": {
-                "avg_mood": 0,
-                "avg_sleep": 0,
-                "avg_progress": 0,
-                "consistency_streak": 0,
-                "life_score": 0,
-            },
-            "charts": {
-                "labels": [],
-                "mood": [],
-                "sleep": [],
-                "progress": [],
-                "study": [],
-                "exercise": [],
-            },
-            "insights": [],
-            "history": [],
-        }
 
-    mood_values = [row["mood_score"] for row in rows]
-    sleep_values = [row["sleep_hours"] for row in rows]
-    progress_values = [row["progress_percent"] for row in rows]
-    study_values = [row["study_hours"] for row in rows]
-    exercise_values = [row["exercise_minutes"] for row in rows]
-    recent = rows[-7:]
-    previous = rows[-14:-7]
+def _profile_name(life_score: int) -> str:
+    if life_score > 75:
+        return "Produtivo Consistente"
+    if life_score > 50:
+        return "Equilibrado"
+    return "Oscilante"
+
+
+def _comparison_block(label: str, current_values, previous_values):
+    return {
+        "label": label,
+        "current": _average(current_values),
+        "previous": _average(previous_values),
+        "delta": _delta(current_values, previous_values),
+    }
+
+
+def get_analytics_snapshot(user_id: int, force_refresh: bool = False) -> dict:
+    cache_key = f"analytics:{user_id}:snapshot"
+    if not force_refresh:
+        cached = cache_get(cache_key)
+        if cached is not None:
+            return cached
+
+    entries = (
+        DailyEntry.query.filter_by(user_id=user_id)
+        .order_by(DailyEntry.entry_date.asc())
+        .all()
+    )
+
+    history = [entry.to_dict() for entry in entries]
+    empty_payload = {
+        "summary": {
+            "life_score": 0,
+            "profile": "Sem dados suficientes",
+            "avg_mood": 0,
+            "avg_sleep": 0,
+            "avg_study": 0,
+            "avg_progress": 0,
+            "avg_energy": 0,
+            "current_streak": 0,
+            "best_streak": 0,
+            "weekly_goal_progress": 0,
+            "latest_mood": 0,
+        },
+        "metrics": {
+            "min_mood": 0,
+            "max_mood": 0,
+            "min_progress": 0,
+            "max_progress": 0,
+        },
+        "correlations": {
+            "sleep_mood": None,
+            "study_progress": None,
+            "exercise_mood": None,
+        },
+        "comparisons": {
+            "mood": {"label": "Humor", "current": 0, "previous": 0, "delta": 0},
+            "sleep": {"label": "Sono", "current": 0, "previous": 0, "delta": 0},
+            "progress": {"label": "Progresso", "current": 0, "previous": 0, "delta": 0},
+        },
+        "gamification": {
+            "days_to_new_record": 0,
+            "weekly_productive_days": 0,
+        },
+        "charts": {
+            "labels": [],
+            "mood": [],
+            "sleep": [],
+            "progress": [],
+            "study": [],
+            "exercise": [],
+            "weekly_labels": ["Semana atual", "Semana anterior"],
+            "weekly_mood": [0, 0],
+            "weekly_progress": [0, 0],
+        },
+        "history": [],
+        "mood_values": [],
+    }
+
+    if not entries:
+        return cache_set(cache_key, empty_payload, ttl=current_app.config["CACHE_TTL_SECONDS"])
+
+    mood_values = [entry.mood_score for entry in entries]
+    sleep_values = [entry.sleep_hours for entry in entries]
+    study_values = [entry.study_hours for entry in entries]
+    progress_values = [entry.progress_percent for entry in entries]
+    exercise_values = [entry.exercise_minutes for entry in entries]
+    energy_values = [entry.energy_level for entry in entries]
+
+    current_week = history[-7:]
+    previous_week = history[-14:-7]
+    current_streak, best_streak = _streaks(history)
+    productive_recent = sum(1 for item in current_week if _is_productive(item))
 
     avg_mood = _average(mood_values)
     avg_sleep = _average(sleep_values)
-    avg_progress = _average(progress_values)
     avg_study = _average(study_values)
-    avg_exercise = _average(exercise_values)
-    life_score = round(
-        min(
-            100,
-            (avg_sleep / 8) * 25
-            + (avg_mood / 10) * 25
-            + (avg_progress / 100) * 30
-            + min(avg_exercise / 45, 1) * 10
-            + min(avg_study / 4, 1) * 10,
-        ),
-        1,
-    )
+    avg_progress = _average(progress_values)
+    avg_energy = _average(energy_values)
+    life_score = _life_score(avg_sleep, avg_study, avg_mood)
+    weekly_goal_progress = round((productive_recent / 7) * 100) if current_week else 0
+    days_to_new_record = 0 if current_streak > best_streak else max(best_streak - current_streak + 1, 1)
 
-    sleep_mood_corr = _pearson(sleep_values, mood_values)
-    study_progress_corr = _pearson(study_values, progress_values)
-    exercise_mood_corr = _pearson(exercise_values, mood_values)
-
-    insights = []
-    if sleep_mood_corr and sleep_mood_corr >= 0.35:
-        insights.append("Seu humor tende a melhorar quando voce dorme mais.")
-    if study_progress_corr and study_progress_corr >= 0.35:
-        insights.append("As horas de estudo estao ligadas a um progresso mais forte.")
-    if exercise_mood_corr and exercise_mood_corr >= 0.30:
-        insights.append("Exercicio aparece como um gatilho positivo para o seu humor.")
-
-    no_exercise_days = sum(1 for row in recent if row["exercise_minutes"] == 0)
-    if no_exercise_days >= 3:
-        insights.append("Nos ultimos dias faltou movimento. Retomar exercicio pode destravar energia e foco.")
-
-    low_days = [
-        row["entry_date"]
-        for row in recent
-        if row["progress_percent"] < 30 and row["mood_score"] <= 5
-    ]
-    if low_days:
-        insights.append("Houve sinais recentes de queda emocional junto com baixa execucao. Vale reduzir friccao e priorizar pequenas vitorias.")
-
-    mood_trend = _trend([row["mood_score"] for row in previous], [row["mood_score"] for row in recent])
-    progress_trend = _trend([row["progress_percent"] for row in previous], [row["progress_percent"] for row in recent])
-
-    if mood_trend > 0.4:
-        insights.append("Seu humor medio subiu na janela mais recente. Ha um movimento real de melhora.")
-    elif mood_trend < -0.4:
-        insights.append("Seu humor medio caiu na janela mais recente. Talvez seja hora de rever descanso e carga.")
-
-    if progress_trend > 5:
-        insights.append("Sua execucao esta acelerando. O sistema mostra mais consistencia na ultima semana.")
-    elif progress_trend < -5:
-        insights.append("O progresso desacelerou nos ultimos dias. Ajustes pequenos agora evitam uma queda maior.")
-
-    if not insights:
-        insights.append("Voce ainda esta formando padroes. Continue registrando para liberar insights mais precisos.")
-
-    history = [
-        {
-            "id": row["id"],
-            "entry_date": row["entry_date"],
-            "sleep_hours": row["sleep_hours"],
-            "study_hours": row["study_hours"],
-            "exercise_minutes": row["exercise_minutes"],
-            "reading_hours": row["reading_hours"],
-            "leisure_hours": row["leisure_hours"],
-            "mood_score": row["mood_score"],
-            "progress_percent": row["progress_percent"],
-            "energy_level": row["energy_level"],
-            "notes": row["notes"],
-        }
-        for row in reversed(rows)
-    ]
-
-    return {
+    payload = {
         "summary": {
+            "life_score": life_score,
+            "profile": _profile_name(life_score),
             "avg_mood": avg_mood,
             "avg_sleep": avg_sleep,
-            "avg_progress": avg_progress,
             "avg_study": avg_study,
-            "avg_exercise": avg_exercise,
-            "consistency_streak": _longest_consistency_streak(rows),
-            "life_score": life_score,
+            "avg_progress": avg_progress,
+            "avg_energy": avg_energy,
+            "current_streak": current_streak,
+            "best_streak": best_streak,
+            "weekly_goal_progress": weekly_goal_progress,
+            "latest_mood": history[-1]["mood_score"],
+        },
+        "metrics": {
+            "min_mood": _min_value(mood_values),
+            "max_mood": _max_value(mood_values),
+            "min_progress": _min_value(progress_values),
+            "max_progress": _max_value(progress_values),
+        },
+        "correlations": {
+            "sleep_mood": _pearson(sleep_values, mood_values),
+            "study_progress": _pearson(study_values, progress_values),
+            "exercise_mood": _pearson(exercise_values, mood_values),
+        },
+        "comparisons": {
+            "mood": _comparison_block(
+                "Humor",
+                [item["mood_score"] for item in current_week],
+                [item["mood_score"] for item in previous_week],
+            ),
+            "sleep": _comparison_block(
+                "Sono",
+                [item["sleep_hours"] for item in current_week],
+                [item["sleep_hours"] for item in previous_week],
+            ),
+            "progress": _comparison_block(
+                "Progresso",
+                [item["progress_percent"] for item in current_week],
+                [item["progress_percent"] for item in previous_week],
+            ),
+        },
+        "gamification": {
+            "days_to_new_record": days_to_new_record,
+            "weekly_productive_days": productive_recent,
         },
         "charts": {
-            "labels": [row["entry_date"] for row in rows],
+            "labels": [item["entry_date"] for item in history],
             "mood": mood_values,
             "sleep": sleep_values,
             "progress": progress_values,
             "study": study_values,
             "exercise": exercise_values,
+            "weekly_labels": ["Semana atual", "Semana anterior"],
+            "weekly_mood": [
+                _average([item["mood_score"] for item in current_week]),
+                _average([item["mood_score"] for item in previous_week]),
+            ],
+            "weekly_progress": [
+                _average([item["progress_percent"] for item in current_week]),
+                _average([item["progress_percent"] for item in previous_week]),
+            ],
         },
-        "correlations": {
-            "sleep_mood": sleep_mood_corr,
-            "study_progress": study_progress_corr,
-            "exercise_mood": exercise_mood_corr,
-        },
-        "insights": insights,
-        "history": history,
+        "history": list(reversed(history)),
+        "mood_values": mood_values,
     }
+
+    return cache_set(cache_key, payload, ttl=current_app.config["CACHE_TTL_SECONDS"])

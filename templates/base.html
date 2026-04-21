@@ -4,13 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}MindTrack-Life{% endblock %}</title>
+    <script>
+        const savedTheme = localStorage.getItem("mindtrack-theme") || "dark";
+        document.documentElement.dataset.theme = savedTheme;
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-shell">
         {% if session.get('user_id') %}
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="brand">
                 <span class="brand-mark">M</span>
                 <div>
@@ -23,11 +27,28 @@
                 <a href="{{ url_for('web.create_entry_view') }}">Registrar dia</a>
                 <a href="{{ url_for('web.history') }}">Historico</a>
                 <a href="{{ url_for('web.insights') }}">Insights</a>
+                <a href="{{ url_for('web.export_csv') }}">Exportar CSV</a>
                 <a href="{{ url_for('auth.logout') }}">Logout</a>
             </nav>
         </aside>
         {% endif %}
         <main class="content {% if not session.get('user_id') %}auth-layout{% endif %}">
+            {% if session.get('user_id') %}
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle" type="button" aria-label="Abrir menu" data-menu-toggle>
+                        <span></span><span></span><span></span>
+                    </button>
+                    <div>
+                        <p class="eyebrow">MindTrack-Life</p>
+                        <strong>Ola, {{ session.get('user_name', 'usuario') }}</strong>
+                    </div>
+                </div>
+                <button class="theme-toggle" type="button" data-theme-toggle>
+                    Alternar tema
+                </button>
+            </header>
+            {% endif %}
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <div class="flash-stack">
@@ -40,6 +61,7 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -5,13 +5,20 @@
     <div>
         <p class="eyebrow">Registro diario</p>
         <h1>{% if entry %}Atualize seu dia{% else %}Registre seu dia em menos de um minuto{% endif %}</h1>
+        <p class="hero-copy">
+            {% if is_prefill and entry %}
+            Os valores abaixo vieram do seu ultimo registro para voce salvar mais rapido.
+            {% else %}
+            Um unico formulario para capturar habitos, humor e progresso sem friccao.
+            {% endif %}
+        </p>
     </div>
 </section>
 
 <form method="post" class="panel form-grid entry-form">
     <label>
         <span>Data</span>
-        <input type="date" name="entry_date" value="{{ entry.entry_date if entry else today }}" required>
+        <input type="date" name="entry_date" value="{{ today if is_prefill else (entry.entry_date if entry else today) }}" required>
     </label>
     <label>
         <span>Sono (horas)</span>
@@ -35,11 +42,17 @@
     </label>
     <label>
         <span>Humor (1 a 10)</span>
-        <input type="range" min="1" max="10" name="mood_score" value="{{ entry.mood_score if entry else 7 }}" required>
+        <div class="range-group">
+            <input type="range" min="1" max="10" name="mood_score" value="{{ entry.mood_score if entry else 7 }}" required data-range-input>
+            <output>{{ entry.mood_score if entry else 7 }}</output>
+        </div>
     </label>
     <label>
         <span>Energia (1 a 10)</span>
-        <input type="range" min="1" max="10" name="energy_level" value="{{ entry.energy_level if entry else 7 }}" required>
+        <div class="range-group">
+            <input type="range" min="1" max="10" name="energy_level" value="{{ entry.energy_level if entry else 7 }}" required data-range-input>
+            <output>{{ entry.energy_level if entry else 7 }}</output>
+        </div>
     </label>
     <label>
         <span>Progresso (%)</span>

@@ -1,5 +1,6 @@
 .venv/
 .uv-cache/
+.uv-python/
 __pycache__/
 *.pyc
 instance/*.db
@@ -9,3 +10,4 @@ instance/exports/
 dist/
 build/
 *.log
+.env
