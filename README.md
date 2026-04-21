@@ -142,17 +142,3 @@ Para producao, use PostgreSQL do proprio Render ou Railway.
 3. o sistema salva no banco
 4. analytics, forecast e insights sao recalculados
 5. dashboard mostra score, tendencias, comparacoes e recomendacoes
-
-## Status atual
-
-- repositorio versionado e publicado no GitHub
-- base pronta para deploy
-- README atualizado para recrutador e avaliador tecnico
-
-## Proximos upgrades naturais
-
-- screenshots reais do dashboard no README
-- filtros mensal e trimestral
-- notificacoes e lembretes
-- exportacao PDF
-- deploy online final com URL publica
