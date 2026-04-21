@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | MindTrack-Life{% endblock %}
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">Painel principal</p>
+        <h1>Seu comportamento, seu humor e sua evolucao em uma visao clara.</h1>
+        <p class="hero-copy">Registre o dia, acompanhe tendencias e transforme rotina em inteligencia pessoal.</p>
+    </div>
+    <a class="primary-button" href="{{ url_for('web.create_entry_view') }}">Registrar hoje</a>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <span>Humor medio</span>
+        <strong>{{ data.summary.avg_mood }}</strong>
+        <small>escala de 1 a 10</small>
+    </article>
+    <article class="stat-card">
+        <span>Sono medio</span>
+        <strong>{{ data.summary.avg_sleep }}h</strong>
+        <small>rotina de recuperacao</small>
+    </article>
+    <article class="stat-card">
+        <span>Life Score</span>
+        <strong>{{ data.summary.life_score }}</strong>
+        <small>indice geral de equilibrio</small>
+    </article>
+    <article class="stat-card">
+        <span>Consistencia</span>
+        <strong>{{ data.summary.consistency_streak }} dias</strong>
+        <small>sequencia mais forte</small>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel chart-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Tendencia</p>
+                <h2>Humor, sono e progresso</h2>
+            </div>
+        </div>
+        <canvas id="trendChart"></canvas>
+    </article>
+
+    <article class="panel chart-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Habitos</p>
+                <h2>Estudo e exercicio</h2>
+            </div>
+        </div>
+        <canvas id="habitChart"></canvas>
+    </article>
+
+    <article class="panel quick-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Acao rapida</p>
+                <h2>Registrar o dia em uma tela</h2>
+            </div>
+        </div>
+        <div class="quick-metrics">
+            <div><span>Progresso medio</span><strong>{{ data.summary.avg_progress }}%</strong></div>
+            <div><span>Estudo medio</span><strong>{{ data.summary.avg_study }}h</strong></div>
+            <div><span>Exercicio medio</span><strong>{{ data.summary.avg_exercise }} min</strong></div>
+        </div>
+        <a class="secondary-button" href="{{ url_for('web.create_entry_view') }}">Abrir formulario</a>
+    </article>
+
+    <article class="panel insights-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Insights</p>
+                <h2>Leituras do seu padrao</h2>
+            </div>
+        </div>
+        <div class="insight-list">
+            {% for insight in data.insights[:4] %}
+            <div class="insight-item">{{ insight }}</div>
+            {% endfor %}
+        </div>
+    </article>
+    <script id="chart-data" type="application/json">{{ data.charts | tojson }}</script>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

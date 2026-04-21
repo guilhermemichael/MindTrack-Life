@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Historico | MindTrack-Life{% endblock %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Historico</p>
+        <h1>Todos os registros em ordem clara e editavel.</h1>
+    </div>
+</section>
+
+<section class="panel table-panel">
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Sono</th>
+                <th>Estudo</th>
+                <th>Exercicio</th>
+                <th>Humor</th>
+                <th>Progresso</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry.entry_date }}</td>
+                <td>{{ entry.sleep_hours }}h</td>
+                <td>{{ entry.study_hours }}h</td>
+                <td>{{ entry.exercise_minutes }} min</td>
+                <td>{{ entry.mood_score }}/10</td>
+                <td>{{ entry.progress_percent }}%</td>
+                <td class="actions">
+                    <a class="table-link" href="{{ url_for('web.edit_entry', entry_id=entry.id) }}">Editar</a>
+                    <form method="post" action="{{ url_for('web.delete_entry_view', entry_id=entry.id) }}">
+                        <button class="table-button danger" type="submit">Excluir</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7">Nenhum registro ainda. Crie o primeiro para liberar analises.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

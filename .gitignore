@@ -1,0 +1,11 @@
+.venv/
+.uv-cache/
+__pycache__/
+*.pyc
+instance/*.db
+instance/exports/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+*.log

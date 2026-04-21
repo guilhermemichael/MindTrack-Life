@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Insights | MindTrack-Life{% endblock %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Analise comportamental</p>
+        <h1>Leituras acionaveis sobre habitos, humor e progresso.</h1>
+    </div>
+</section>
+
+<section class="insight-grid">
+    {% for insight in data.insights %}
+    <article class="panel insight-card">
+        <p class="eyebrow">Insight {{ loop.index }}</p>
+        <h2>{{ insight }}</h2>
+    </article>
+    {% endfor %}
+</section>
+
+<section class="stats-grid compact">
+    <article class="stat-card">
+        <span>Correlacao sono x humor</span>
+        <strong>{{ data.correlations.sleep_mood if data.correlations.sleep_mood is not none else '--' }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Correlacao estudo x progresso</span>
+        <strong>{{ data.correlations.study_progress if data.correlations.study_progress is not none else '--' }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Correlacao exercicio x humor</span>
+        <strong>{{ data.correlations.exercise_mood if data.correlations.exercise_mood is not none else '--' }}</strong>
+    </article>
+</section>
+{% endblock %}

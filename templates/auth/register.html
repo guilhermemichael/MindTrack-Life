@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Cadastro | MindTrack-Life{% endblock %}
+{% block content %}
+<section class="auth-card">
+    <p class="eyebrow">Comece agora</p>
+    <h1>Crie sua conta e transforme rotina em clareza.</h1>
+    <form method="post" class="form-grid auth-form">
+        <label>
+            <span>Nome</span>
+            <input type="text" name="name" required>
+        </label>
+        <label>
+            <span>Email</span>
+            <input type="email" name="email" required>
+        </label>
+        <label>
+            <span>Senha</span>
+            <input type="password" name="password" required>
+        </label>
+        <button class="primary-button" type="submit">Criar conta</button>
+    </form>
+    <p class="helper-text">Ja tem conta? <a href="{{ url_for('auth.login') }}">Fazer login</a></p>
+</section>
+{% endblock %}
