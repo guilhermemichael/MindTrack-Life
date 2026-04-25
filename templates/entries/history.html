@@ -22,6 +22,7 @@
                 <th>Exercicio</th>
                 <th>Humor</th>
                 <th>Progresso</th>
+                <th>Produtividade</th>
                 <th>Energia</th>
                 <th>Acoes</th>
             </tr>
@@ -35,6 +36,7 @@
                 <td>{{ entry.exercise_minutes }} min</td>
                 <td>{{ entry.mood_score }}/10</td>
                 <td>{{ entry.progress_percent }}%</td>
+                <td>{{ entry.productivity_score }}%</td>
                 <td>{{ entry.energy_level }}/10</td>
                 <td class="actions">
                     <a class="table-link" href="{{ url_for('web.edit_entry', entry_id=entry.id) }}">Editar</a>
@@ -45,7 +47,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="8">Nenhum registro ainda. Crie o primeiro para liberar analises.</td>
+                <td colspan="9">Nenhum registro ainda. Crie o primeiro para liberar analises.</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -20,6 +20,6 @@ def predict_mood(values: list[float], horizon_days: int = 7):
     return {
         "predicted_mood": predicted,
         "horizon_days": horizon_days,
-        "message": f"Se continuar assim, seu humor medio pode chegar a {predicted} em {horizon_days} dias.",
+        "message": f"Se continuar nesse padrao, seu humor medio pode chegar a {predicted} em {horizon_days} dias.",
         "direction": direction,
     }

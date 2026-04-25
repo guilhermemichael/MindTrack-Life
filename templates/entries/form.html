@@ -58,6 +58,10 @@
         <span>Progresso (%)</span>
         <input type="number" min="0" max="100" name="progress_percent" value="{{ entry.progress_percent if entry else 50 }}" required>
     </label>
+    <label>
+        <span>Produtividade (%)</span>
+        <input type="number" min="0" max="100" name="productivity_score" value="{{ entry.productivity_score if entry else 0 }}">
+    </label>
     <label class="full-span">
         <span>Notas</span>
         <textarea name="notes" rows="4" placeholder="Como foi seu dia?">{{ entry.notes if entry else '' }}</textarea>

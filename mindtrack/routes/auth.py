@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..database import db
 from ..models.user import User
+from ..services.audit import record_audit_log
 from ..utils.security import check_password, hash_password
 
 
@@ -26,6 +27,14 @@ def register():
             try:
                 user = User(name=name, email=email, password_hash=hash_password(password))
                 db.session.add(user)
+                db.session.flush()
+                record_audit_log(
+                    user_id=user.id,
+                    action="auth.register",
+                    entity_name="users",
+                    entity_id=user.id,
+                    new_data=user.to_dict(),
+                )
                 db.session.commit()
                 current_app.logger.info("Novo usuario registrado: %s", email)
                 flash("Conta criada com sucesso. Agora faca login.", "success")
@@ -51,6 +60,14 @@ def login():
             session["user_id"] = user.id
             session["user_name"] = user.name
             session.permanent = True
+            record_audit_log(
+                user_id=user.id,
+                action="auth.login",
+                entity_name="users",
+                entity_id=user.id,
+                new_data={"email": user.email},
+            )
+            db.session.commit()
             current_app.logger.info("Usuario autenticado: %s", email)
             return redirect(url_for("web.dashboard"))
 
@@ -59,5 +76,15 @@ def login():
 
 @auth_bp.route("/logout")
 def logout():
+    user_id = session.get("user_id")
+    if user_id:
+        record_audit_log(
+            user_id=user_id,
+            action="auth.logout",
+            entity_name="users",
+            entity_id=user_id,
+            new_data=None,
+        )
+        db.session.commit()
     session.clear()
     return redirect(url_for("auth.login"))

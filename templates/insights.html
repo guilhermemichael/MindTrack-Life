@@ -49,4 +49,34 @@
         <strong>{{ data.correlations.exercise_mood if data.correlations.exercise_mood is not none else '--' }}</strong>
     </article>
 </section>
+
+<section class="stats-grid compact two-line">
+    <article class="stat-card">
+        <span>Snapshots analiticos</span>
+        <strong>{{ data.database_architecture.snapshots | length }}</strong>
+        <small>camadas pre-calculadas</small>
+    </article>
+    <article class="stat-card">
+        <span>Resumo semanal</span>
+        <strong>
+            {% if data.database_architecture.weekly_summary_view %}
+            {{ data.database_architecture.weekly_summary_view.total_entries }}
+            {% else %}
+            --
+            {% endif %}
+        </strong>
+        <small>registros na view semanal</small>
+    </article>
+    <article class="stat-card">
+        <span>Delta produtividade</span>
+        <strong>
+            {% if data.database_architecture.productivity_drop and data.database_architecture.productivity_drop.difference is not none %}
+            {{ data.database_architecture.productivity_drop.difference }}
+            {% else %}
+            --
+            {% endif %}
+        </strong>
+        <small>variacao vs semana anterior</small>
+    </article>
+</section>
 {% endblock %}

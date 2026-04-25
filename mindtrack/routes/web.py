@@ -17,16 +17,16 @@ from ..services.entries import (
     validate_entry_payload,
 )
 from ..services.forecast import predict_mood
-from ..services.insights import generate_insights
+from ..services.insights import generate_insights, list_persisted_insights
 
 
 web_bp = Blueprint("web", __name__)
 
 
-def _build_dashboard_payload(user_id: int) -> dict:
+def _build_dashboard_payload(user_id: str) -> dict:
     analytics = get_analytics_snapshot(user_id)
     forecast = predict_mood(analytics["mood_values"])
-    insights = generate_insights(analytics, forecast)
+    insights = [item.to_dict() for item in list_persisted_insights(user_id)] or generate_insights(analytics, forecast)
 
     return {
         "summary": analytics["summary"],
@@ -87,9 +87,9 @@ def history():
     return render_template("entries/history.html", entries=entries)
 
 
-@web_bp.route("/entries/<int:entry_id>/edit", methods=["GET", "POST"])
+@web_bp.route("/entries/<entry_id>/edit", methods=["GET", "POST"])
 @login_required
-def edit_entry(entry_id: int):
+def edit_entry(entry_id: str):
     entry = get_entry(session["user_id"], entry_id)
     if entry is None:
         flash("Registro nao encontrado.", "error")
@@ -111,9 +111,9 @@ def edit_entry(entry_id: int):
     return render_template("entries/form.html", entry=entry, is_prefill=False, today=date.today().isoformat())
 
 
-@web_bp.post("/entries/<int:entry_id>/delete")
+@web_bp.post("/entries/<entry_id>/delete")
 @login_required
-def delete_entry_view(entry_id: int):
+def delete_entry_view(entry_id: str):
     if delete_entry(session["user_id"], entry_id):
         flash("Registro removido.", "success")
     else:

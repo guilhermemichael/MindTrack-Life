@@ -3,10 +3,12 @@ services:
     name: mindtrack-life
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: flask --app app db upgrade && gunicorn app:app
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: FLASK_APP
+        value: app
       - key: SECRET_KEY
         sync: false
       - key: DATABASE_URL
